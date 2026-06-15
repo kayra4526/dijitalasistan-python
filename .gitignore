@@ -1,0 +1,9 @@
+# Kişisel veri dosyaları
+butce.json
+Yillik_Ajanda.json
+Ajanda_Okuma_Kopyasi.txt
+
+# Python sanal ortam (virtual environment) dosyaları
+.venv/
+__pycache__/
+*.pyc
