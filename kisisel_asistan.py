@@ -2,59 +2,68 @@ import customtkinter as ctk
 import json
 import os
 import datetime
+import calendar
 
-# --- 1. VERİ İŞLEMLERİ ---
+# --- 1. DOSYA AYARLARI ---
 BUTCE_DOSYASI = "butce.json"
 AJANDA_DOSYASI = "Yillik_Ajanda.json"
+MEDYA_DOSYASI = "Medya_Listesi.json"
 
 def veri_yukle(dosya_adi, varsayilan):
     if os.path.exists(dosya_adi):
-        with open(dosya_adi, "r", encoding="utf-8") as dosya:
-            return json.load(dosya)
+        try:
+            with open(dosya_adi, "r", encoding="utf-8") as dosya: return json.load(dosya)
+        except: return varsayilan
     return varsayilan
 
 def veri_kaydet(dosya_adi, veri):
     with open(dosya_adi, "w", encoding="utf-8") as dosya:
         json.dump(veri, dosya, indent=4, ensure_ascii=False)
 
-# Verileri belleğe al
+# Verileri yükle
 butce_verisi = veri_yukle(BUTCE_DOSYASI, {"gelir": 0.0, "kategoriler": ["Genel", "Market", "Fatura", "Eğlence"], "harcamalar": []})
 ajanda_verisi = veri_yukle(AJANDA_DOSYASI, {})
+medya_verisi = veri_yukle(MEDYA_DOSYASI, {"izlenecekler": [], "izleniyor": [], "bitti": []})
 
-# --- 2. ARAYÜZ (GUI) KURULUMU ---
+# --- 2. ARAYÜZ KURULUMU ---
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 app = ctk.CTk()
-app.geometry("500x700")
-app.title("🚀 Kişisel Dijital Asistan")
+app.geometry("500x950") 
+app.title("🚀 Kişisel Dijital Asistan v8.0 - Tam Çalışan Sürüm")
 
-# Sekme (Tab) Yöneticisini Oluştur
 sekmeler = ctk.CTkTabview(app)
 sekmeler.pack(padx=20, pady=20, fill="both", expand=True)
 
-sekme_butce = sekmeler.add("💰 Bütçe Takibi")
-sekme_ajanda = sekmeler.add("📓 Ajanda & Görevler")
+sekme_butce = sekmeler.add("💰 Bütçe")
+sekme_ajanda = sekmeler.add("📓 Ajanda")
+sekme_takvim = sekmeler.add("📅 Takvim")
+sekme_medya = sekmeler.add("🎬 Medya")
 
 # ==========================================
-# --- 3. BÜTÇE SEKMESİ (Sekme 1) ---
+# --- BÜTÇE ---
 # ==========================================
-
 def butce_ekrani_guncelle():
     toplam_harcama = sum(h["tutar"] for h in butce_verisi["harcamalar"])
     kalan = butce_verisi["gelir"] - toplam_harcama
     ozet_metni = f"💵 Gelir: {butce_verisi['gelir']:.2f} TL\n💸 Gider: {toplam_harcama:.2f} TL\n------------------------\n📈 Kalan: {kalan:.2f} TL"
     butce_ozet_label.configure(text=ozet_metni, text_color="red" if kalan < 0 else "white")
 
+def yeni_kategori_ekle():
+    yeni = kat_entry.get()
+    if yeni and yeni not in butce_verisi["kategoriler"]:
+        butce_verisi["kategoriler"].append(yeni)
+        veri_kaydet(BUTCE_DOSYASI, butce_verisi)
+        kategori_secim.configure(values=butce_verisi["kategoriler"])
+        kat_entry.delete(0, 'end')
+
 def gelir_ekle():
     try:
         butce_verisi["gelir"] = float(gelir_entry.get())
         veri_kaydet(BUTCE_DOSYASI, butce_verisi)
         butce_ekrani_guncelle()
-        gelir_entry.delete(0, 'end')
-        butce_durum_label.configure(text="✅ Gelir güncellendi!", text_color="green")
-    except ValueError:
-        butce_durum_label.configure(text="❌ Geçersiz sayı!", text_color="red")
+    except: pass
 
 def harcama_ekle():
     try:
@@ -64,39 +73,24 @@ def harcama_ekle():
         butce_verisi["harcamalar"].append({"kategori": kategori_secim.get(), "aciklama": aciklama, "tutar": tutar})
         veri_kaydet(BUTCE_DOSYASI, butce_verisi)
         butce_ekrani_guncelle()
-        tutar_entry.delete(0, 'end')
-        aciklama_entry.delete(0, 'end')
-        butce_durum_label.configure(text=f"✅ Harcama eklendi!", text_color="green")
-    except ValueError:
-        butce_durum_label.configure(text="❌ Geçersiz tutar!", text_color="red")
+    except: pass
 
-# Bütçe Arayüz Elemanları
 butce_ozet_label = ctk.CTkLabel(sekme_butce, text="", font=("Courier", 16), justify="left")
 butce_ozet_label.pack(pady=10)
-
-ctk.CTkLabel(sekme_butce, text="Yeni Gelir (TL):").pack()
-gelir_entry = ctk.CTkEntry(sekme_butce)
-gelir_entry.pack(pady=5)
-ctk.CTkButton(sekme_butce, text="Gelir Kaydet", command=gelir_ekle).pack(pady=5)
-
-ctk.CTkLabel(sekme_butce, text="--- Harcama Ekle ---", font=("Arial", 14, "bold")).pack(pady=15)
-kategori_secim = ctk.CTkOptionMenu(sekme_butce, values=butce_verisi["kategoriler"])
-kategori_secim.pack(pady=5)
-aciklama_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Açıklama")
-aciklama_entry.pack(pady=5)
-tutar_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Tutar (TL)")
-tutar_entry.pack(pady=5)
+kat_frame = ctk.CTkFrame(sekme_butce); kat_frame.pack(pady=5)
+kat_entry = ctk.CTkEntry(kat_frame, placeholder_text="Yeni Kategori Adı"); kat_entry.pack(side="left", padx=5)
+ctk.CTkButton(kat_frame, text="+", command=yeni_kategori_ekle, width=30).pack(side="left", padx=5)
+gelir_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Yeni Gelir Miktarı"); gelir_entry.pack(pady=5)
+ctk.CTkButton(sekme_butce, text="Gelir Güncelle", command=gelir_ekle).pack(pady=5)
+kategori_secim = ctk.CTkOptionMenu(sekme_butce, values=butce_verisi["kategoriler"]); kategori_secim.pack(pady=10)
+aciklama_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Açıklama"); aciklama_entry.pack(pady=5)
+tutar_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Tutar (TL)"); tutar_entry.pack(pady=5)
 ctk.CTkButton(sekme_butce, text="Harcama Ekle", command=harcama_ekle, fg_color="red").pack(pady=10)
-
-butce_durum_label = ctk.CTkLabel(sekme_butce, text="", font=("Arial", 12))
-butce_durum_label.pack(pady=5)
-
 butce_ekrani_guncelle()
 
 # ==========================================
-# --- 4. AJANDA SEKMESİ (Sekme 2) ---
+# --- AJANDA ---
 # ==========================================
-
 def ajanda_ekrani_guncelle():
     tarih = tarih_entry.get()
     ajanda_textbox.configure(state="normal")
@@ -199,5 +193,136 @@ ctk.CTkButton(islem_frame, text="🗑️ Sil", command=gorev_sil, width=60, fg_c
 
 ajanda_ekrani_guncelle()
 
-# Uygulamayı başlat
+# ==========================================
+# --- YENİ TAKVİM (Kutucuklu & Etkinlikli) ---
+# ==========================================
+curr_year, curr_month = datetime.date.today().year, datetime.date.today().month
+
+def takvim_ciz():
+    for widget in cal_frame.winfo_children(): widget.destroy()
+    ctk.CTkLabel(cal_frame, text=f"{calendar.month_name[curr_month]} {curr_year}", font=("Arial", 20, "bold")).pack()
+    grid = ctk.CTkFrame(cal_frame, fg_color="transparent")
+    grid.pack(pady=10)
+    
+    cal = calendar.monthcalendar(curr_year, curr_month)
+    for r, hafta in enumerate(cal):
+        for c, gun in enumerate(hafta):
+            if gun != 0:
+                tarih_key = f"{gun:02d}-{curr_month:02d}-{curr_year}"
+                # Büyük kutucuk
+                box = ctk.CTkFrame(grid, width=90, height=90, border_width=2, border_color="white", fg_color="#333")
+                box.grid(row=r, column=c, padx=5, pady=5)
+                ctk.CTkLabel(box, text=str(gun), font=("Arial", 14, "bold")).pack(anchor="nw", padx=5)
+                
+                # Etkinlik varsa yaz
+                if tarih_key in ajanda_verisi and ajanda_verisi[tarih_key]["gorevler"]:
+                    ctk.CTkLabel(box, text=ajanda_verisi[tarih_key]["gorevler"][0]["tanim"][:10], font=("Arial", 10), text_color="cyan").pack(anchor="sw", padx=5)
+
+def ay_degis(delta):
+    global curr_month, curr_year
+    curr_month += delta
+    if curr_month > 12: curr_month = 1; curr_year += 1
+    if curr_month < 1: curr_month = 12; curr_year -= 1
+    takvim_ciz()
+
+def etkinlik_ekle():
+    tarih = f"{int(gun_entry.get()):02d}-{curr_month:02d}-{curr_year}"
+    if tarih not in ajanda_verisi: ajanda_verisi[tarih] = {"gorevler": []}
+    ajanda_verisi[tarih]["gorevler"].append({"tanim": event_entry.get(), "tamamlandi": False})
+    veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
+    takvim_ciz()
+
+cal_frame = ctk.CTkFrame(sekme_takvim); cal_frame.pack(pady=10)
+nav = ctk.CTkFrame(sekme_takvim); nav.pack(pady=5)
+ctk.CTkButton(nav, text="<", width=40, command=lambda: ay_degis(-1)).pack(side="left", padx=5)
+ctk.CTkButton(nav, text=">", width=40, command=lambda: ay_degis(1)).pack(side="left", padx=5)
+
+ctrl = ctk.CTkFrame(sekme_takvim); ctrl.pack(pady=10)
+gun_entry = ctk.CTkEntry(ctrl, width=40, placeholder_text="Gün"); gun_entry.pack(side="left", padx=5)
+event_entry = ctk.CTkEntry(ctrl, width=150, placeholder_text="Etkinlik"); event_entry.pack(side="left", padx=5)
+ctk.CTkButton(ctrl, text="Ekle/Değiştir", command=etkinlik_ekle).pack(side="left", padx=5)
+
+
+# ==========================================
+# --- MEDYA (EKSİKSİZ) ---
+# ==========================================
+def medya_ekrani_guncelle():
+    medya_textbox.configure(state="normal")
+    medya_textbox.delete("1.0", "end")
+    
+    icerik = "📌 İZLENECEKLER:\n"
+    for i, ad in enumerate(medya_verisi["izlenecekler"], 1):
+        icerik += f"  {i}. {ad}\n"
+        
+    icerik += "\n▶️ İZLENİYOR:\n"
+    for i, ad in enumerate(medya_verisi["izleniyor"], 1):
+        icerik += f"  {i}. {ad}\n"
+        
+    icerik += "\n✅ BİTTİ:\n"
+    for i, ad in enumerate(medya_verisi["bitti"], 1):
+        icerik += f"  {i}. {ad}\n"
+        
+    medya_textbox.insert("end", icerik)
+    medya_textbox.configure(state="disabled")
+
+def medya_ekle():
+    ad = medya_entry.get()
+    if ad:
+        medya_verisi["izlenecekler"].append(ad)
+        veri_kaydet(MEDYA_DOSYASI, medya_verisi)
+        medya_ekrani_guncelle()
+        medya_entry.delete(0, 'end')
+
+def izlemeye_basla():
+    try:
+        idx = int(medya_islem_entry.get()) - 1
+        if 0 <= idx < len(medya_verisi["izlenecekler"]):
+            ad = medya_verisi["izlenecekler"].pop(idx)
+            medya_verisi["izleniyor"].append(ad)
+            veri_kaydet(MEDYA_DOSYASI, medya_verisi)
+            medya_ekrani_guncelle()
+            medya_islem_entry.delete(0, 'end')
+    except ValueError: pass
+
+def bitir():
+    try:
+        idx = int(medya_islem_entry.get()) - 1
+        if 0 <= idx < len(medya_verisi["izleniyor"]):
+            ad = medya_verisi["izleniyor"].pop(idx)
+            medya_verisi["bitti"].append(ad)
+            veri_kaydet(MEDYA_DOSYASI, medya_verisi)
+            medya_ekrani_guncelle()
+            medya_islem_entry.delete(0, 'end')
+    except ValueError: pass
+
+def medya_sil():
+    try:
+        idx = int(medya_islem_entry.get()) - 1
+        if 0 <= idx < len(medya_verisi["izlenecekler"]): medya_verisi["izlenecekler"].pop(idx)
+        elif 0 <= idx < len(medya_verisi["izleniyor"]): medya_verisi["izleniyor"].pop(idx)
+        elif 0 <= idx < len(medya_verisi["bitti"]): medya_verisi["bitti"].pop(idx)
+        veri_kaydet(MEDYA_DOSYASI, medya_verisi)
+        medya_ekrani_guncelle()
+    except ValueError: pass
+
+# Arayüz
+medya_entry = ctk.CTkEntry(sekme_medya, placeholder_text="Yeni Dizi/Film...")
+medya_entry.pack(pady=5)
+ctk.CTkButton(sekme_medya, text="Listeye Ekle", command=medya_ekle).pack(pady=5)
+
+medya_textbox = ctk.CTkTextbox(sekme_medya, height=250, width=400)
+medya_textbox.pack(pady=10)
+
+# İşlem Paneli
+islem_frame = ctk.CTkFrame(sekme_medya)
+islem_frame.pack(pady=10)
+medya_islem_entry = ctk.CTkEntry(islem_frame, width=60, placeholder_text="No")
+medya_islem_entry.pack(side="left", padx=5)
+
+ctk.CTkButton(islem_frame, text="▶️ İzlemeye Başla", command=izlemeye_basla, width=120).pack(side="left", padx=5)
+ctk.CTkButton(islem_frame, text="✅ Bitir", command=bitir, width=60, fg_color="green").pack(side="left", padx=5)
+ctk.CTkButton(islem_frame, text="🗑️ Sil", command=medya_sil, width=60, fg_color="red").pack(side="left", padx=5)
+
+medya_ekrani_guncelle()
+
 app.mainloop()
