@@ -8,6 +8,7 @@ import calendar
 BUTCE_DOSYASI = "butce.json"
 AJANDA_DOSYASI = "Yillik_Ajanda.json"
 MEDYA_DOSYASI = "Medya_Listesi.json"
+ALISKANLIK_DOSYASI = "aliskanlik.json" 
 
 def veri_yukle(dosya_adi, varsayilan):
     if os.path.exists(dosya_adi):
@@ -24,6 +25,7 @@ def veri_kaydet(dosya_adi, veri):
 butce_verisi = veri_yukle(BUTCE_DOSYASI, {"gelir": 0.0, "kategoriler": ["Genel", "Market", "Fatura", "Eğlence"], "harcamalar": []})
 ajanda_verisi = veri_yukle(AJANDA_DOSYASI, {})
 medya_verisi = veri_yukle(MEDYA_DOSYASI, {"izlenecekler": [], "izleniyor": [], "bitti": []})
+aliskanlik_verisi = veri_yukle(ALISKANLIK_DOSYASI, {"aliskanliklar": [], "tarihler": {}}) 
 
 # --- 2. ARAYÜZ KURULUMU ---
 ctk.set_appearance_mode("dark")
@@ -40,6 +42,7 @@ sekme_butce = sekmeler.add("💰 Bütçe")
 sekme_ajanda = sekmeler.add("📓 Ajanda")
 sekme_takvim = sekmeler.add("📅 Takvim")
 sekme_medya = sekmeler.add("🎬 Medya")
+sekme_aliskanlik = sekmeler.add("🎯 Habit Tracker")
 
 # ==========================================
 # --- BÜTÇE ---
@@ -166,7 +169,7 @@ tarih_entry.insert(0, bugun)
 tarih_entry.pack(pady=5)
 ctk.CTkButton(sekme_ajanda, text="Tarihi Getir", command=ajanda_ekrani_guncelle).pack(pady=5)
 
-ajanda_textbox = ctk.CTkTextbox(sekme_ajanda, height=200, width=400)
+ajanda_textbox = ctk.CTkTextbox(sekme_ajanda, height=500, width=500)
 ajanda_textbox.pack(pady=10)
 
 # Günlük ve Görev Ekleme Kutuları
@@ -254,11 +257,19 @@ def ay_degis(delta):
     takvim_ciz()
 
 def etkinlik_ekle():
-    tarih = f"{int(gun_entry.get()):02d}-{curr_month:02d}-{curr_year}"
-    if tarih not in ajanda_verisi: ajanda_verisi[tarih] = {"gorevler": []}
-    ajanda_verisi[tarih]["gorevler"].append({"tanim": event_entry.get(), "tamamlandi": False})
-    veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
-    takvim_ciz()
+    try:
+        # Seçilen günü, takvimde o an açık olan dinamik ay (curr_month) ve yıla (curr_year) bağlıyoruz
+        tarih = f"{int(gun_entry.get()):02d}-{curr_month:02d}-{curr_year}"
+        if tarih not in ajanda_verisi: ajanda_verisi[tarih] = {"gunluk": "", "gorevler": []}
+        ajanda_verisi[tarih]["gorevler"].append({"tanim": event_entry.get(), "tamamlandi": False})
+        veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
+        takvim_ciz()
+        
+        # Ekledikten sonra kutuları temizlesin (opsiyonel ama konforludur)
+        gun_entry.delete(0, 'end')
+        event_entry.delete(0, 'end')
+    except ValueError:
+        pass # Gün kısmına sayı girilmezse hata vermesin diye önlem
 
 cal_frame = ctk.CTkFrame(sekme_takvim); cal_frame.pack(pady=10)
 nav = ctk.CTkFrame(sekme_takvim); nav.pack(pady=5)
@@ -338,7 +349,7 @@ medya_entry = ctk.CTkEntry(sekme_medya, placeholder_text="Yeni Dizi/Film...")
 medya_entry.pack(pady=5)
 ctk.CTkButton(sekme_medya, text="Listeye Ekle", command=medya_ekle).pack(pady=5)
 
-medya_textbox = ctk.CTkTextbox(sekme_medya, height=250, width=400)
+medya_textbox = ctk.CTkTextbox(sekme_medya, height=450, width=400)
 medya_textbox.pack(pady=10)
 
 # İşlem Paneli
@@ -350,6 +361,116 @@ medya_islem_entry.pack(side="left", padx=5)
 ctk.CTkButton(islem_frame, text="▶️ İzlemeye Başla", command=izlemeye_basla, width=120).pack(side="left", padx=5)
 ctk.CTkButton(islem_frame, text="✅ Bitir", command=bitir, width=60, fg_color="green").pack(side="left", padx=5)
 ctk.CTkButton(islem_frame, text="🗑️ Sil", command=medya_sil, width=60, fg_color="red").pack(side="left", padx=5)
+
+
+
+# ==========================================
+# --- VERTICAL HABIT TRACKER (AŞAĞI DOĞRU EXCEL) ---
+# ==========================================
+def aliskanlik_ekrani_guncelle():
+    global aliskanlik_verisi, curr_month, curr_year
+    
+    # Ekranı temizle
+    for widget in tracker_scroll.winfo_children():
+        widget.destroy()
+
+    import datetime, calendar
+    
+    # Tarihi güvenli al
+    try:
+        yil = curr_year
+        ay = curr_month
+    except NameError:
+        yil = datetime.date.today().year
+        ay = datetime.date.today().month
+        
+    gun_sayisi = calendar.monthrange(yil, ay)[1]
+    ay_adi = calendar.month_name[ay]
+    ay_key = f"{ay:02d}-{yil}"
+
+    # JSON verisi bozuksa/boşsa onar
+    if not isinstance(aliskanlik_verisi, dict):
+        aliskanlik_verisi = {"aliskanliklar": [], "tarihler": {}}
+    if "aliskanliklar" not in aliskanlik_verisi:
+        aliskanlik_verisi["aliskanliklar"] = []
+    if "tarihler" not in aliskanlik_verisi:
+        aliskanlik_verisi["tarihler"] = {}
+
+    # 1. ANA BAŞLIK
+    baslik = ctk.CTkLabel(tracker_scroll, text=f"📊 {ay_adi} {yil} Matrix", font=("Arial", 16, "bold"), text_color="cyan")
+    baslik.grid(row=0, column=0, columnspan=len(aliskanlik_verisi["aliskanliklar"])+1, pady=(10, 20), sticky="w")
+
+    # 2. SÜTUN BAŞLIKLARI (ALIŞKANLIK İSİMLERİ YAN YANA)
+    ctk.CTkLabel(tracker_scroll, text="Günler", font=("Arial", 12, "bold"), text_color="#aaa").grid(row=1, column=0, padx=10, pady=5)
+    
+    for c_idx, al_adi in enumerate(aliskanlik_verisi["aliskanliklar"], start=1):
+        # Eğer isim çok uzunsa arayüzü bozmasın diye ilk 10 harfini alıp sonuna .. koyuyoruz
+        gosterim_adi = al_adi[:10] + ".." if len(al_adi) > 12 else al_adi
+        ctk.CTkLabel(tracker_scroll, text=gosterim_adi, font=("Arial", 11, "bold")).grid(row=1, column=c_idx, padx=10, pady=5)
+        
+        if al_adi not in aliskanlik_verisi["tarihler"][ay_key]:
+            aliskanlik_verisi["tarihler"][ay_key][al_adi] = {}
+
+    # 3. GÜNLER VE KUTUCUKLAR (AŞAĞI DOĞRU 30-31 SATIR)
+    for g in range(1, gun_sayisi + 1):
+        r_idx = g + 1 # Satır numarası
+        gun_str = str(g)
+        
+        # Sol baştaki gün numarası (01, 02, 03...)
+        ctk.CTkLabel(tracker_scroll, text=f"{g:02d}", font=("Arial", 10, "bold")).grid(row=r_idx, column=0, padx=10, pady=2)
+        
+        # O güne ait yan yana kutucuklar
+        for c_idx, al_adi in enumerate(aliskanlik_verisi["aliskanliklar"], start=1):
+            durum = aliskanlik_verisi["tarihler"][ay_key][al_adi].get(gun_str, False)
+            var = ctk.BooleanVar(value=durum)
+            
+            def durum_kaydet(a_isim=al_adi, g_num=gun_str, v=var):
+                aliskanlik_verisi["tarihler"][ay_key][a_isim][g_num] = v.get()
+                veri_kaydet(ALISKANLIK_DOSYASI, aliskanlik_verisi)
+
+            # Kutucukları gün satırına yan yana yerleştir
+            cb = ctk.CTkCheckBox(tracker_scroll, text="", variable=var, command=durum_kaydet, width=20, checkbox_width=18, checkbox_height=18)
+            cb.grid(row=r_idx, column=c_idx, padx=10, pady=2)
+
+def yeni_aliskanlik_ekle():
+    global aliskanlik_verisi
+    yeni_al = aliskanlik_entry.get()
+    if yeni_al and yeni_al not in aliskanlik_verisi.get("aliskanliklar", []):
+        aliskanlik_verisi["aliskanliklar"].append(yeni_al)
+        veri_kaydet(ALISKANLIK_DOSYASI, aliskanlik_verisi)
+        aliskanlik_ekrani_guncelle()
+        aliskanlik_entry.delete(0, 'end')
+
+def aliskanlik_sil():
+    global aliskanlik_verisi
+    silinecek = aliskanlik_entry.get()
+    if silinecek in aliskanlik_verisi.get("aliskanliklar", []):
+        aliskanlik_verisi["aliskanliklar"].remove(silinecek)
+        veri_kaydet(ALISKANLIK_DOSYASI, aliskanlik_verisi)
+        aliskanlik_ekrani_guncelle()
+        aliskanlik_entry.delete(0, 'end')
+
+# --- ARAYÜZ ELEMANLARI ---
+ctk.CTkLabel(sekme_aliskanlik, text="✨ Monthly Habit Matrix", font=("Arial", 18, "bold")).pack(pady=10)
+
+al_frame = ctk.CTkFrame(sekme_aliskanlik)
+al_frame.pack(pady=5)
+
+aliskanlik_entry = ctk.CTkEntry(al_frame, placeholder_text="Habit name (Örn: Spor, Su)", width=200)
+aliskanlik_entry.grid(row=0, column=0, padx=5)
+
+ctk.CTkButton(al_frame, text="Ekle", command=yeni_aliskanlik_ekle, width=60, fg_color="green").grid(row=0, column=1, padx=5)
+ctk.CTkButton(al_frame, text="Sil", command=aliskanlik_sil, width=50, fg_color="red").grid(row=0, column=2, padx=5)
+
+# Normal aşağı kaydırma (Vertical)
+tracker_scroll = ctk.CTkScrollableFrame(sekme_aliskanlik, width=600, height=350)
+tracker_scroll.pack(pady=10, fill="both", expand=True)
+
+# İlk tetikleme
+aliskanlik_ekrani_guncelle()
+
+
+
 
 medya_ekrani_guncelle()
 takvim_ciz()
