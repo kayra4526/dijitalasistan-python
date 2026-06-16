@@ -30,12 +30,8 @@ Uygulama, **5 temel sekmeden** oluşur ve tüm veriler yerel `.json` dosyaların
 Projeyi kendi bilgisayarınızda çalıştırmak için aşağıdaki adımları sırasıyla terminalinize yapıştırın:
 
 Gerekli kütüphaneyi yükleyin (Eğer yüklü değilse):
-
-Bash
 pip install customtkinter
--Uygulamayı çalıştırın:
 
-Bash
 python kisisel_asistan.py
 
 
