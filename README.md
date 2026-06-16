@@ -66,5 +66,4 @@ Uygulama, verilerinizi otomatik olarak proje klasöründe şu isimlerdeki **JSON
 
 ---
 
-*Geliştirici: [Adın Soyadın]*
-*Eğitim: **OSTİM Technical University** | Software Engineering*
+*Geliştirici: Gökçen Kayra Ünver
