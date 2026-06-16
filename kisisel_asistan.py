@@ -30,7 +30,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 app = ctk.CTk()
-app.geometry("500x950") 
+app.geometry("700x800") 
 app.title("🚀 Kişisel Dijital Asistan v8.0 - Tam Çalışan Sürüm")
 
 sekmeler = ctk.CTkTabview(app)
@@ -198,25 +198,53 @@ ajanda_ekrani_guncelle()
 # ==========================================
 curr_year, curr_month = datetime.date.today().year, datetime.date.today().month
 
+
+
+
 def takvim_ciz():
     for widget in cal_frame.winfo_children(): widget.destroy()
     ctk.CTkLabel(cal_frame, text=f"{calendar.month_name[curr_month]} {curr_year}", font=("Arial", 20, "bold")).pack()
+    
     grid = ctk.CTkFrame(cal_frame, fg_color="transparent")
     grid.pack(pady=10)
     
-    cal = calendar.monthcalendar(curr_year, curr_month)
-    for r, hafta in enumerate(cal):
-        for c, gun in enumerate(hafta):
-            if gun != 0:
-                tarih_key = f"{gun:02d}-{curr_month:02d}-{curr_year}"
-                # Büyük kutucuk
-                box = ctk.CTkFrame(grid, width=90, height=90, border_width=2, border_color="white", fg_color="#333")
-                box.grid(row=r, column=c, padx=5, pady=5)
-                ctk.CTkLabel(box, text=str(gun), font=("Arial", 14, "bold")).pack(anchor="nw", padx=5)
+    # --- YENİ: GÜN İSİMLERİ BAŞLIKLARI ---
+    gun_isimleri = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
+    for i, isim in enumerate(gun_isimleri):
+        # Gün isimleri için küçük, sade birer etiket oluşturuyoruz
+        lbl = ctk.CTkLabel(grid, text=isim, font=("Arial", 11, "bold"), text_color="#aaa")
+        # row=0 değerini gün isimlerine ayırdık
+        lbl.grid(row=0, column=i, pady=(0, 5))
+    
+    ilkgun, gun_sayisi = calendar.monthrange(curr_year, curr_month)
+    gun_sayaci = 1
+    
+    # Gün isimleri row=0'da olduğu için, takvim kutularını row+1 (yani 1'den 6'ya) olarak başlatıyoruz
+    for r in range(6): 
+        for c in range(7):
+            if (r == 0 and c < ilkgun) or gun_sayaci > gun_sayisi:
+                # BOŞ GÜNLER (Transparan)
+                box = ctk.CTkFrame(grid, width=80, height=80, fg_color="transparent")
+                box.pack_propagate(False) 
+                box.grid(row=r+1, column=c, padx=2, pady=2) # r+1 yaptık
+            else:
+                # DOLU GÜNLER
+                box = ctk.CTkFrame(grid, width=80, height=80, border_width=2, border_color="#555", fg_color="#333")
+                box.pack_propagate(False) 
+                box.grid(row=r+1, column=c, padx=2, pady=2) # r+1 yaptık
                 
-                # Etkinlik varsa yaz
+                # Gün sayısı
+                ctk.CTkLabel(box, text=str(gun_sayaci), font=("Arial", 12, "bold")).pack(anchor="nw", padx=5)
+                
+                # Etkinlik kontrolü
+                tarih_key = f"{gun_sayaci:02d}-{curr_month:02d}-{curr_year}"
                 if tarih_key in ajanda_verisi and ajanda_verisi[tarih_key]["gorevler"]:
-                    ctk.CTkLabel(box, text=ajanda_verisi[tarih_key]["gorevler"][0]["tanim"][:10], font=("Arial", 10), text_color="cyan").pack(anchor="sw", padx=5)
+                    ctk.CTkLabel(box, text=ajanda_verisi[tarih_key]["gorevler"][0]["tanim"], font=("Arial", 15), text_color="#AED6F1", wraplength=70).pack(anchor="sw", padx=2)
+                
+                gun_sayaci += 1
+
+
+
 
 def ay_degis(delta):
     global curr_month, curr_year
@@ -324,5 +352,5 @@ ctk.CTkButton(islem_frame, text="✅ Bitir", command=bitir, width=60, fg_color="
 ctk.CTkButton(islem_frame, text="🗑️ Sil", command=medya_sil, width=60, fg_color="red").pack(side="left", padx=5)
 
 medya_ekrani_guncelle()
-
+takvim_ciz()
 app.mainloop()
