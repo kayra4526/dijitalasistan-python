@@ -1,69 +1,60 @@
 # 🚀 Kişisel Dijital Asistan (Personal Digital Assistant)
 
-*Bu proje, günlük yaşamın karmaşasını yönetmek, bütçe takibi yapmak, görevleri organize etmek ve medya tüketimini kayıt altına almak için geliştirilmiş; **Python** ve **CustomTkinter** tabanlı, hepsi bir arada bir masaüstü uygulamasıdır.*
+*Bu proje; günlük yaşamı organize etmek, harcamaları milimetrik takip etmek, görevleri planlamak ve alışkanlıkları yönetmek için sıfırdan geliştirilmiş **Python tabanlı, modern arayüzlü bir masaüstü asistan uygulamasıdır.*** Modern ve şık bir UI/UX deneyimi sunmak için **`customtkinter`** kütüphanesi kullanılarak özel olarak tasarlanmıştır.
 
 ---
 
-## 🌟 Temel Özellikler
+## 🌟 Temel Modüller ve Özellikler
 
-Uygulamanız, dört ana modülden oluşan **dinamik** ve **verimli** bir arayüze sahiptir:
+Uygulama, **5 temel sekmeden** oluşur ve tüm veriler yerel `.json` dosyalarında *güvenli ve hafif* bir şekilde saklanır.
 
-### 💰 Bütçe Yönetimi
-* **Gelir/Gider Takibi:** Günlük harcamalarınızı kategorize ederek takip edin.
-* **Dinamik Kategori:** Uygulama içerisinden anlık olarak yeni bütçe kategorileri (*örn: Ulaşım, Okul, Staj*) ekleyin.
-* **Özet Görünüm:** Gelir, Gider ve Kalan bütçenizi tek bir ekranda yan yana analiz edin.
-
-### 📓 Ajanda ve Görev Yönetimi
-* **Günlük Notlar:** Günlük tutma özelliği ile o günün notlarını kaydedin.
-* **Görev Takibi:** Görevlerinizi ekleyin, **"Tamamla"** butonuyla işaretleyin veya **"Sil"** butonuyla listenizden kaldırın.
-* **Tarih Bazlı Kayıt:** Takvim ile senkronize çalışan, seçtiğiniz tarihe göre veri getiren sistem.
-
-### 📅 Akıllı Takvim
-* **Görsel Planlayıcı:** *calendar* kütüphanesi ile aylık bazda günleri kare kutucuklar halinde görüntüleyin.
-* **Navigasyon:** Aylar arası geçiş yapın.
-* **Etkinlik Entegrasyonu:** Ajanda'ya eklediğiniz görevler, takvim kutucuklarında otomatik olarak belirir.
-* **Dinamik Ekleme:** Takvim üzerinden belirli bir güne etkinlik adı girerek hızlıca kayıt oluşturun.
-
-### 🎬 Medya Takibi
-* **İzleme Listeleri:** Dizi ve filmlerinizi *"İzlenecekler"*, *"İzleniyor"* ve *"Bitti"* kategorilerine ayırın.
-* **Durum Yönetimi:** İzlemeye başladığınız veya bitirdiğiniz yapımları butonlarla listeler arası taşıyın.
+* **💰 Bütçe (Budget Tracker):** Gelir-gider takibi yapmanızı sağlar. Harcamalarınızı kategorize edebilir ve güncel bakiye özetinizi *anlık* olarak görebilirsiniz.
+* **📓 Ajanda (Daily Planner):** Günlük notlar alabileceğiniz ve yapılacaklar listesi (To-Do) oluşturabileceğiniz modüldür. Görevleri tamamlandı olarak (✅) işaretleyebilir veya listeden silebilirsiniz (🗑️).
+* **📅 Takvim (Visual Calendar):** Seçtiğiniz aydaki günleri *profesyonel bir Excel ızgarası nizamında* gösteren dinamik takvim. Ajandaya eklediğiniz görevler, takvim üzerinde ilgili günün kutucuğunda otomatik olarak belirir.
+* **🎬 Medya (Media Tracker):** *İzlenecek, izleniyor* ve *bitti* durumlarındaki dizileri/filmleri pratik bir şekilde takip etmenizi sağlayan liste yöneticisi.
+* **🎯 Habit Tracker (Aylık Matris):** Aylık alışkanlıklarınızı (spor, su içme, kodlama vb.) dikey bir matris üzerinde takip edebileceğiniz sistem. Günler yukarıdan aşağıya sıralanır ve tek tıkla o günkü alışkanlığınızı tamamlayabilirsiniz. *Ekranı taşırmayan, modern kaydırma (scroll) desteğine sahiptir.*
 
 ---
 
-## 🛠 Kullanılan Teknolojiler
-* **Dil:** *Python*
-* **Arayüz:** *CustomTkinter* (Modern, karanlık tema desteği)
-* **Veri Depolama:** *JSON* (Yerel dosya tabanlı veritabanı)
-* **Kütüphaneler:** `datetime`, `calendar`, `os`, `json`
+## 🛠️ Kullanılan Teknolojiler
+
+* **Dil:** `Python 3.x`
+* **Arayüz (GUI):** `CustomTkinter` *(Karanlık tema ve modern UI desteği)*
+* **Veritabanı:** Yerel JSON Dosyaları (`json` modülü)
+* **Zaman Yönetimi:** `datetime`, `calendar`
 
 ---
 
 ## ⚙️ Kurulum ve Çalıştırma
 
-Projeyi yerel bilgisayarınızda çalıştırmak için şu adımları izleyin:
+Projeyi kendi bilgisayarınızda çalıştırmak için aşağıdaki adımları sırasıyla terminalinize yapıştırın:
 
-1.  **Python**'ın yüklü olduğundan emin olun.
-2.  **Gerekli kütüphaneyi yükleyin:**
-    ```bash
-    pip install customtkinter
-    ```
-3.  **Depoyu klonlayın:**
-    ```bash
-    git clone [https://github.com/KULLANICI_ADIN/REPO_ADIN.git](https://github.com/KULLANICI_ADIN/REPO_ADIN.git)
-    ```
-4.  **Uygulamayı çalıştırın:**
-    ```bash
-    python main.py
-    ```
+Gerekli kütüphaneyi yükleyin (Eğer yüklü değilse):
 
----
+Bash
+pip install customtkinter
+-Uygulamayı çalıştırın:
 
-## 📂 Veri Saklama
-Uygulama, verilerinizi otomatik olarak proje klasöründe şu isimlerdeki **JSON** dosyalarında saklar:
-* `butce.json`: Finansal verileriniz.
-* `Yillik_Ajanda.json`: Günlük notlar ve görevler.
-* `Medya_Listesi.json`: Medya takip listeleriniz.
+Bash
+python kisisel_asistan.py
 
----
 
-*Geliştirici: Gökçen Kayra Ünver
+
+
+📂 Veri Yapısı (JSON Dosyaları)
+Uygulama çalıştığı dizinde verileri kaybetmemek için 4 adet JSON dosyası oluşturur. Verilerinizi yedeklemek isterseniz sadece bu dosyaları kopyalamanız yeterlidir:
+
+butce.json
+
+Yillik_Ajanda.json
+
+Medya_Listesi.json
+
+aliskanlik.json
+
+Geliştirmeye ve yeni modüller eklemeye açıktır. 🚀
+
+
+
+
+Gökçen Kayra Ünver
