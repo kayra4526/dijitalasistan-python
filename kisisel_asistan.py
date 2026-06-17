@@ -3,12 +3,18 @@ import json
 import os
 import datetime
 import calendar
+import urllib.request
+import threading
 
 # --- 1. DOSYA AYARLARI ---
 BUTCE_DOSYASI = "butce.json"
 AJANDA_DOSYASI = "Yillik_Ajanda.json"
 MEDYA_DOSYASI = "Medya_Listesi.json"
 ALISKANLIK_DOSYASI = "aliskanlik.json" 
+CILT_DOSYASI = "cilt_bakimi.json"
+F1_DOSYASI = "f1_takvim.json"
+
+
 
 def veri_yukle(dosya_adi, varsayilan):
     if os.path.exists(dosya_adi):
@@ -26,6 +32,33 @@ butce_verisi = veri_yukle(BUTCE_DOSYASI, {"gelir": 0.0, "kategoriler": ["Genel",
 ajanda_verisi = veri_yukle(AJANDA_DOSYASI, {})
 medya_verisi = veri_yukle(MEDYA_DOSYASI, {"izlenecekler": [], "izleniyor": [], "bitti": []})
 aliskanlik_verisi = veri_yukle(ALISKANLIK_DOSYASI, {"aliskanliklar": [], "tarihler": {}}) 
+varsayilan_cilt = {
+    "son_hafta": datetime.date.today().isocalendar()[1], # Yılın kaçıncı haftası
+    "rutin": {
+        "Pazartesi": ["☀️ Sabah: Jumiso HA Toner, CreamCo, Güneş Kremi", "🌙 Akşam: Fiddy Metodu (Salisilik + Kil + Yağ Bazlı Temizleyici)"],
+        "Salı": ["☀️ Sabah: Jumiso HA Toner, CreamCo, Güneş Kremi", "🌙 Akşam: Çift Aşama Temizlik + C Vitamini / Glikolik Asit"],
+        "Çarşamba": ["☀️ Sabah: Jumiso HA Toner, CreamCo, Güneş Kremi", "🌙 Akşam: Çift Aşama Temizlik + Bariyer Onarım / Leke Aydınlatma"],
+        "Perşembe": ["☀️ Sabah: Jumiso HA Toner, CreamCo, Güneş Kremi", "🌙 Akşam: Çift Aşama Temizlik + C Vitamini / Glikolik Asit"],
+        "Cuma": ["☀️ Sabah: Jumiso HA Toner, CreamCo, Güneş Kremi", "🌙 Akşam: Çift Aşama Temizlik + Bariyer Onarım"],
+        "Cumartesi": ["☀️ Sabah: Jumiso HA Toner, CreamCo, Güneş Kremi", "🌙 Akşam: Fiddy Metodu (Derin Gözenek Temizliği)"],
+        "Pazar": ["☀️ Sabah: Sadece Su, CreamCo, Güneş Kremi", "🌙 Akşam: Çift Aşama Temizlik + Sadece Nemlendirici (Cildi Dinlendirme)"]
+    },
+    "durum": {} # Atılan tikler burada tutulacak
+}
+cilt_verisi = veri_yukle(CILT_DOSYASI, varsayilan_cilt)
+
+
+varsayilan_f1 = [
+    {"isim": "🇪🇸 İspanya Grand Prix", "tarih": "2026-06-14", "cuma": "14:30 Antrenman 1\n18:00 Antrenman 2", "cumartesi": "13:30 Antrenman 3\n17:00 Sıralama", "pazar": "16:00 Büyük Yarış"},
+    {"isim": "🇦🇹 Avusturya Grand Prix", "tarih": "2026-06-28", "cuma": "13:30 Antrenman 1\n17:00 Sprint Sıralama", "cumartesi": "13:00 Sprint Yarışı\n17:00 Sıralama", "pazar": "16:00 Büyük Yarış"},
+    {"isim": "🇬🇧 Britanya Grand Prix", "tarih": "2026-07-05", "cuma": "14:30 Antrenman 1\n18:00 Antrenman 2", "cumartesi": "13:30 Antrenman 3\n17:00 Sıralama", "pazar": "17:00 Büyük Yarış"},
+    {"isim": "🇧🇪 Belçika Grand Prix", "tarih": "2026-07-19", "cuma": "14:30 Antrenman 1\n18:00 Antrenman 2", "cumartesi": "13:30 Antrenman 3\n17:00 Sıralama", "pazar": "16:00 Büyük Yarış"},
+    {"isim": "🇭🇺 Macaristan Grand Prix", "tarih": "2026-07-26", "cuma": "14:30 Antrenman 1\n18:00 Antrenman 2", "cumartesi": "13:30 Antrenman 3\n17:00 Sıralama", "pazar": "16:00 Büyük Yarış"},
+    {"isim": "🇳🇱 Hollanda Grand Prix", "tarih": "2026-08-23", "cuma": "13:30 Antrenman 1\n17:00 Sprint Sıralama", "cumartesi": "13:00 Sprint Yarışı\n16:00 Sıralama", "pazar": "16:00 Büyük Yarış"},
+    {"isim": "🇮🇹 İtalya Grand Prix", "tarih": "2026-09-06", "cuma": "14:30 Antrenman 1\n18:00 Antrenman 2", "cumartesi": "13:30 Antrenman 3\n17:00 Sıralama", "pazar": "16:00 Büyük Yarış"},
+    {"isim": "🇦🇿 Azerbaycan Grand Prix", "tarih": "2026-09-27", "cuma": "10:30 Antrenman 1\n14:00 Antrenman 2", "cumartesi": "10:30 Antrenman 3\n14:00 Sıralama", "pazar": "14:00 Büyük Yarış"}
+]
+f1_verisi = veri_yukle(F1_DOSYASI, varsayilan_f1)
 
 # --- 2. ARAYÜZ KURULUMU ---
 ctk.set_appearance_mode("dark")
@@ -43,6 +76,8 @@ sekme_ajanda = sekmeler.add("📓 Ajanda")
 sekme_takvim = sekmeler.add("📅 Takvim")
 sekme_medya = sekmeler.add("🎬 Medya")
 sekme_aliskanlik = sekmeler.add("🎯 Habit Tracker")
+sekme_cilt = sekmeler.add("🫧 Skincare")
+sekme_f1 = sekmeler.add("🏎️ F1 Hub")
 
 # ==========================================
 # --- BÜTÇE ---
@@ -92,110 +127,138 @@ ctk.CTkButton(sekme_butce, text="Harcama Ekle", command=harcama_ekle, fg_color="
 butce_ekrani_guncelle()
 
 # ==========================================
-# --- AJANDA ---
+# --- AJANDA (GÖREV+NOT+GÜNLÜK TAM KONTROL) ---
 # ==========================================
 def ajanda_ekrani_guncelle():
     tarih = tarih_entry.get()
     ajanda_textbox.configure(state="normal")
-    ajanda_textbox.delete("1.0", "end") # Ekranı temizle
+    ajanda_textbox.delete("1.0", "end")
     
     if tarih in ajanda_verisi:
         veri = ajanda_verisi[tarih]
-        icerik = f"📅 TARİH: {tarih}\n" + "="*30 + "\n"
-        icerik += f"📖 GÜNLÜK:\n{veri.get('gunluk', 'Kayıt yok.')}\n\n"
+        icerik = f"📅 {tarih}\n" + "="*35 + "\n\n"
+        
+        # 1. GÜNLÜK
+        icerik += "✍️ GÜNLÜK:\n" + veri.get("gunluk", "Henüz günlük girişi yok.") + "\n\n"
+        
+        # 2. NOTLAR (Artık Numaralı!)
+        icerik += "📌 NOTLAR:\n"
+        if veri.get("notlar"):
+            for i, not_metni in enumerate(veri["notlar"], 1):
+                icerik += f"  {i}. {not_metni}\n"
+        else:
+            icerik += "  Kayıt yok.\n"
+        icerik += "\n"
+        
+        # 3. GÖREVLER
         icerik += "📝 GÖREVLER:\n"
-        for i, gorev in enumerate(veri.get("gorevler", []), 1):
-            durum = "✅" if gorev["tamamlandi"] else "⬜"
-            icerik += f"  {i}. {durum} {gorev['tanim']}\n"
+        if veri.get("gorevler"):
+            for i, gorev in enumerate(veri["gorevler"], 1):
+                durum = "✅" if gorev["tamamlandi"] else "⬜"
+                icerik += f"  {i}. {durum} {gorev['tanim']}\n"
+        else:
+            icerik += "  Kayıt yok.\n"
+            
         ajanda_textbox.insert("end", icerik)
     else:
         ajanda_textbox.insert("end", f"ℹ️ {tarih} için henüz kayıt yok.")
+        
     ajanda_textbox.configure(state="disabled")
 
-def gunluk_ekle():
+def veri_ekle():
     tarih = tarih_entry.get()
-    metin = gunluk_entry.get()
+    metin = girdi_entry.get()
+    tur = tur_secim.get()
     if not metin: return
     
-    if tarih not in ajanda_verisi: ajanda_verisi[tarih] = {"gunluk": "", "gorevler": []}
+    if tarih not in ajanda_verisi: 
+        ajanda_verisi[tarih] = {"gunluk": "", "notlar": [], "gorevler": []}
+        
+    if "notlar" not in ajanda_verisi[tarih]: ajanda_verisi[tarih]["notlar"] = []
+    if "gorevler" not in ajanda_verisi[tarih]: ajanda_verisi[tarih]["gorevler"] = []
+    if "gunluk" not in ajanda_verisi[tarih]: ajanda_verisi[tarih]["gunluk"] = ""
     
-    ajanda_verisi[tarih]["gunluk"] += metin + "\n"
+    if tur == "Not":
+        ajanda_verisi[tarih]["notlar"].append(metin)
+    elif tur == "Günlük":
+        ajanda_verisi[tarih]["gunluk"] = metin
+    elif tur == "Görev":
+        ajanda_verisi[tarih]["gorevler"].append({"tanim": metin, "tamamlandi": False})
+        
     veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
     ajanda_ekrani_guncelle()
-    gunluk_entry.delete(0, 'end')
+    girdi_entry.delete(0, 'end')
 
-def gorev_ekle():
-    tarih = tarih_entry.get()
-    tanim = gorev_entry.get()
-    if not tanim: return
-    
-    if tarih not in ajanda_verisi: ajanda_verisi[tarih] = {"gunluk": "", "gorevler": []}
-    
-    ajanda_verisi[tarih]["gorevler"].append({"tanim": tanim, "tamamlandi": False})
-    veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
-    ajanda_ekrani_guncelle()
-    gorev_entry.delete(0, 'end')
-
-# YENİ EKLENENLER: Görev Tamamlama ve Silme
 def gorev_tamamla():
+    # Tamamlama işlemi sadece Görevler için geçerlidir
     tarih = tarih_entry.get()
     try:
-        gorev_no = int(islem_entry.get()) - 1
-        if tarih in ajanda_verisi and 0 <= gorev_no < len(ajanda_verisi[tarih]["gorevler"]):
-            ajanda_verisi[tarih]["gorevler"][gorev_no]["tamamlandi"] = True
-            veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
-            ajanda_ekrani_guncelle()
-            islem_entry.delete(0, 'end')
-    except ValueError:
-        pass # Hatalı girişte bir şey yapma
-
-def gorev_sil():
-    tarih = tarih_entry.get()
-    try:
-        gorev_no = int(islem_entry.get()) - 1
-        if tarih in ajanda_verisi and 0 <= gorev_no < len(ajanda_verisi[tarih]["gorevler"]):
-            ajanda_verisi[tarih]["gorevler"].pop(gorev_no)
+        no = int(islem_entry.get()) - 1
+        if tarih in ajanda_verisi and 0 <= no < len(ajanda_verisi[tarih].get("gorevler", [])):
+            ajanda_verisi[tarih]["gorevler"][no]["tamamlandi"] = True
             veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
             ajanda_ekrani_guncelle()
             islem_entry.delete(0, 'end')
     except ValueError:
         pass
 
-# Ajanda Arayüz Elemanları
-bugun = datetime.date.today().strftime("%d-%m-%Y")
-ctk.CTkLabel(sekme_ajanda, text="Tarih (GG-AA-YYYY):").pack()
-tarih_entry = ctk.CTkEntry(sekme_ajanda)
-tarih_entry.insert(0, bugun)
-tarih_entry.pack(pady=5)
+def veri_sil():
+    tarih = tarih_entry.get()
+    hedef_tur = islem_secim.get() # Neyi sileceğiz? (Görev, Not, Günlük)
+    
+    if tarih not in ajanda_verisi: return
+
+    # Günlük silinecekse numaraya gerek yok, direkt temizle
+    if hedef_tur == "Günlük":
+        ajanda_verisi[tarih]["gunluk"] = ""
+    else:
+        # Not veya Görev silinecekse numaraya bak
+        try:
+            no = int(islem_entry.get()) - 1
+            if hedef_tur == "Görev" and 0 <= no < len(ajanda_verisi[tarih].get("gorevler", [])):
+                ajanda_verisi[tarih]["gorevler"].pop(no)
+            elif hedef_tur == "Not" and 0 <= no < len(ajanda_verisi[tarih].get("notlar", [])):
+                ajanda_verisi[tarih]["notlar"].pop(no)
+        except ValueError:
+            pass # Numara girilmediyse hata verme
+            
+    veri_kaydet(AJANDA_DOSYASI, ajanda_verisi)
+    ajanda_ekrani_guncelle()
+    islem_entry.delete(0, 'end')
+
+# --- ARAYÜZ ---
+ctk.CTkLabel(sekme_ajanda, text="Tarih (GG-AA-YYYY):").pack(pady=(10, 0))
+tarih_entry = ctk.CTkEntry(sekme_ajanda); tarih_entry.insert(0, datetime.date.today().strftime("%d-%m-%Y")); tarih_entry.pack()
 ctk.CTkButton(sekme_ajanda, text="Tarihi Getir", command=ajanda_ekrani_guncelle).pack(pady=5)
 
-ajanda_textbox = ctk.CTkTextbox(sekme_ajanda, height=500, width=500)
+ajanda_textbox = ctk.CTkTextbox(sekme_ajanda, height=300, width=500)
 ajanda_textbox.pack(pady=10)
 
-# Günlük ve Görev Ekleme Kutuları
-girdi_frame = ctk.CTkFrame(sekme_ajanda)
-girdi_frame.pack(pady=5)
+# 1. Ortak Giriş Alanı (Ekleme)
+girdi_frame = ctk.CTkFrame(sekme_ajanda); girdi_frame.pack(pady=5)
+girdi_entry = ctk.CTkEntry(girdi_frame, width=220, placeholder_text="Metni buraya yaz...")
+girdi_entry.pack(side="left", padx=5)
 
-gunluk_entry = ctk.CTkEntry(girdi_frame, width=200, placeholder_text="Günlük notu...")
-gunluk_entry.grid(row=0, column=0, padx=5, pady=5)
-ctk.CTkButton(girdi_frame, text="Not Ekle", command=gunluk_ekle, width=100).grid(row=0, column=1, padx=5, pady=5)
+tur_secim = ctk.CTkOptionMenu(girdi_frame, values=["Görev", "Not", "Günlük"], width=90)
+tur_secim.pack(side="left", padx=5)
 
-gorev_entry = ctk.CTkEntry(girdi_frame, width=200, placeholder_text="Yeni görev...")
-gorev_entry.grid(row=1, column=0, padx=5, pady=5)
-ctk.CTkButton(girdi_frame, text="Görev Ekle", command=gorev_ekle, width=100).grid(row=1, column=1, padx=5, pady=5)
+ctk.CTkButton(girdi_frame, text="Ekle/Kaydet", command=veri_ekle, width=70).pack(side="left", padx=5)
 
-# YENİ EKLENEN: Tamamlama ve Silme Arayüzü
-islem_frame = ctk.CTkFrame(sekme_ajanda)
-islem_frame.pack(pady=10)
+# 2. Akıllı İşlem Alanı (Silme ve Tamamlama)
+islem_frame = ctk.CTkFrame(sekme_ajanda); islem_frame.pack(pady=10)
 
-islem_entry = ctk.CTkEntry(islem_frame, width=60, placeholder_text="No (1,2..)")
-islem_entry.pack(side="left", padx=5)
+ctk.CTkLabel(islem_frame, text="Hedef:").pack(side="left", padx=(5, 2))
+islem_secim = ctk.CTkOptionMenu(islem_frame, values=["Görev", "Not", "Günlük"], width=80)
+islem_secim.pack(side="left", padx=2)
 
-ctk.CTkButton(islem_frame, text="✅ Tamamla", command=gorev_tamamla, width=90, fg_color="green", hover_color="darkgreen").pack(side="left", padx=5)
-ctk.CTkButton(islem_frame, text="🗑️ Sil", command=gorev_sil, width=60, fg_color="red", hover_color="darkred").pack(side="left", padx=5)
+ctk.CTkLabel(islem_frame, text="No:").pack(side="left", padx=(10, 2))
+islem_entry = ctk.CTkEntry(islem_frame, width=40, placeholder_text="No")
+islem_entry.pack(side="left", padx=2)
+
+ctk.CTkButton(islem_frame, text="✅ Görevi Tamamla", command=gorev_tamamla, width=120, fg_color="green", hover_color="darkgreen").pack(side="left", padx=10)
+ctk.CTkButton(islem_frame, text="🗑️ Sil", command=veri_sil, width=60, fg_color="red", hover_color="darkred").pack(side="left", padx=5)
 
 ajanda_ekrani_guncelle()
-
 # ==========================================
 # --- YENİ TAKVİM (Kutucuklu & Etkinlikli) ---
 # ==========================================
@@ -467,10 +530,205 @@ tracker_scroll = ctk.CTkScrollableFrame(sekme_aliskanlik, width=600, height=350)
 tracker_scroll.pack(pady=10, fill="both", expand=True)
 
 # İlk tetikleme
+
+
+# ==========================================
+# --- SKINCARE (CİLT BAKIM ÇİZELGESİ) ---
+# ==========================================
+def cilt_ekrani_guncelle():
+    global cilt_verisi
+    
+    # Otomatik Haftalık Sıfırlama Kontrolü
+    mevcut_hafta = datetime.date.today().isocalendar()[1]
+    if cilt_verisi.get("son_hafta") != mevcut_hafta:
+        cilt_verisi["durum"] = {} # Tikleri sıfırla
+        cilt_verisi["son_hafta"] = mevcut_hafta
+        veri_kaydet(CILT_DOSYASI, cilt_verisi)
+
+    # Ekranı temizle
+    for widget in cilt_scroll.winfo_children():
+        widget.destroy()
+
+    gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+
+    for gun in gunler:
+        # Gün için şık bir başlık çerçevesi
+        gun_frame = ctk.CTkFrame(cilt_scroll, fg_color="#2b2b2b", corner_radius=10)
+        gun_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(gun_frame, text=gun, font=("Arial", 14, "bold"), text_color="cyan").pack(anchor="w", padx=10, pady=5)
+        
+        # O güne ait rutinleri listele
+        adımlar = cilt_verisi["rutin"].get(gun, [])
+        for i, adim in enumerate(adımlar):
+            # Her kutucuk için benzersiz bir ID oluştur (Örn: Pazartesi_0)
+            tik_id = f"{gun}_{i}"
+            durum = cilt_verisi.get("durum", {}).get(tik_id, False)
+            
+            var = ctk.BooleanVar(value=durum)
+            
+            # Tıklandığında kaydedecek fonksiyon
+            def kaydet(t_id=tik_id, v=var):
+                if "durum" not in cilt_verisi: cilt_verisi["durum"] = {}
+                cilt_verisi["durum"][t_id] = v.get()
+                veri_kaydet(CILT_DOSYASI, cilt_verisi)
+
+            # Checkbox'u ekle
+            cb = ctk.CTkCheckBox(gun_frame, text=adim, variable=var, command=kaydet, font=("Arial", 12))
+            cb.pack(anchor="w", padx=20, pady=5)
+
+# --- Arayüz Elemanları ---
+baslik_frame = ctk.CTkFrame(sekme_cilt, fg_color="transparent")
+baslik_frame.pack(pady=10, fill="x")
+
+ctk.CTkLabel(baslik_frame, text="✨ Haftalık Cilt Bakım Çizelgesi", font=("Arial", 18, "bold")).pack()
+ctk.CTkLabel(baslik_frame, text="* Tikler her Pazartesi otomatik sıfırlanır.", font=("Arial", 11, "italic"), text_color="gray").pack()
+
+cilt_scroll = ctk.CTkScrollableFrame(sekme_cilt, width=600, height=500)
+cilt_scroll.pack(pady=10, fill="both", expand=True)
+
+# ==========================================
+# --- 🏎️ F1 YARIŞ MERKEZİ & CANLI API SIRALAMASI ---
+# ==========================================
+suanki_yaris_index = 0
+
+def f1_ilk_acilis():
+    global suanki_yaris_index
+    bugun = datetime.date.today().strftime("%Y-%m-%d")
+    for i, yaris in enumerate(f1_verisi):
+        if yaris["tarih"] >= bugun:
+            suanki_yaris_index = i
+            break
+            
+def f1_ekrani_guncelle():
+    global suanki_yaris_index
+    for widget in f1_takvim_frame.winfo_children(): widget.destroy()
+        
+    yaris = f1_verisi[suanki_yaris_index]
+    bugun = datetime.date.today().strftime("%Y-%m-%d")
+    gecmis_mi = yaris["tarih"] < bugun
+    
+    renk_baslik = "gray" if gecmis_mi else "cyan"
+    durum_metni = "🏁 TAMAMLANDI" if gecmis_mi else "🏎️ YAKLAŞIYOR"
+    renk_kutu = "#222222" if gecmis_mi else "#2b2b2b"
+    kutu_yazi = "gray" if gecmis_mi else "white"
+    
+    # --- TAKVİM NAVİGASYONU ---
+    nav_frame = ctk.CTkFrame(f1_takvim_frame, fg_color="transparent")
+    nav_frame.pack(pady=10, fill="x")
+    
+    btn_prev = ctk.CTkButton(nav_frame, text="< Önceki", width=70, command=lambda: f1_degistir(-1))
+    if suanki_yaris_index == 0: btn_prev.configure(state="disabled")
+    btn_prev.pack(side="left", padx=20)
+    
+    baslik_lbl = ctk.CTkLabel(nav_frame, text=yaris["isim"], font=("Arial", 20, "bold"), text_color=renk_baslik)
+    baslik_lbl.pack(side="left", expand=True)
+    
+    btn_next = ctk.CTkButton(nav_frame, text="Sonraki >", width=70, command=lambda: f1_degistir(1))
+    if suanki_yaris_index == len(f1_verisi) - 1: btn_next.configure(state="disabled")
+    btn_next.pack(side="right", padx=20)
+    
+    ctk.CTkLabel(f1_takvim_frame, text=f"{yaris['tarih']} | {durum_metni}", font=("Arial", 12, "bold"), text_color="gray" if gecmis_mi else "green").pack(pady=5)
+    
+    # --- GÜNLER KUTULARI ---
+    gunler_frame = ctk.CTkFrame(f1_takvim_frame, fg_color="transparent")
+    gunler_frame.pack(pady=10)
+    
+    for idx, gun in enumerate(["cuma", "cumartesi", "pazar"]):
+        kutu = ctk.CTkFrame(gunler_frame, fg_color=renk_kutu, width=180, height=120)
+        kutu.pack_propagate(False)
+        kutu.grid(row=0, column=idx, padx=5)
+        ctk.CTkLabel(kutu, text=gun.upper(), font=("Arial", 14, "bold"), text_color="red" if not gecmis_mi else "gray").pack(pady=5)
+        ctk.CTkLabel(kutu, text=yaris[gun], font=("Arial", 12), text_color=kutu_yazi).pack()
+
+def f1_degistir(yon):
+    global suanki_yaris_index
+    suanki_yaris_index += yon
+    f1_ekrani_guncelle()
+
+# --- INTERNETTEN CANLI VERİ ÇEKME İŞLEMİ (GÜVENLİ) ---
+def canli_siralamayi_cek():
+    # Önce listeyi temizle ve "yükleniyor" ekranı koy
+    for widget in f1_siralama_frame.winfo_children(): widget.destroy()
+    ctk.CTkLabel(f1_siralama_frame, text="⏳ İnternetten Canlı Veri Çekiliyor...", font=("Arial", 14), text_color="yellow").pack(pady=30)
+    
+    def api_istegi():
+        try:
+            # Dünyaca ünlü ücretsiz F1 Ergast API (Jolpi Mirror) - Her yarış sonrası otomatik güncellenir
+            url = "https://api.jolpi.ca/ergast/f1/current/driverStandings.json"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            
+            with urllib.request.urlopen(req, timeout=5) as response:
+                veri = json.loads(response.read().decode())
+                
+            standings = veri["MRData"]["StandingsTable"]["StandingsLists"][0]["DriverStandings"]
+            
+            # Uygulama çökmesin diye veriyi ana ekrana (main thread) güvenle gönderiyoruz
+            app.after(0, lambda: siralama_ekrani_ciz(standings))
+            
+        except Exception:
+            # İnternet yoksa programı KİTLEMİYORUZ. Hata ekranı çiziyoruz!
+            app.after(0, lambda: siralama_hata_ciz())
+            
+    # Uygulamanın donmaması için indirmeyi arka planda başlat
+    threading.Thread(target=api_istegi, daemon=True).start()
+
+def siralama_ekrani_ciz(standings):
+    for widget in f1_siralama_frame.winfo_children(): widget.destroy()
+    
+    baslik_frame = ctk.CTkFrame(f1_siralama_frame, fg_color="transparent")
+    baslik_frame.pack(fill="x", pady=(5, 10))
+    
+    ctk.CTkLabel(baslik_frame, text="🌍 CANLI SÜRÜCÜLER ŞAMPİYONASI", font=("Arial", 15, "bold"), text_color="red").pack(side="left", padx=10)
+    ctk.CTkButton(baslik_frame, text="🔄 Yenile", command=canli_siralamayi_cek, width=70, height=26).pack(side="right", padx=10)
+    
+    # Puanların akacağı liste tasarımı
+    liste_scroll = ctk.CTkScrollableFrame(f1_siralama_frame, width=580, height=220)
+    liste_scroll.pack(fill="both", expand=True, padx=10, pady=5)
+    
+    for surucu in standings:
+        sira = surucu["position"]
+        isim = f"{surucu['Driver']['givenName']} {surucu['Driver']['familyName']}"
+        takim = surucu["Constructors"][0]["name"]
+        puan = surucu["points"]
+        
+        satir = ctk.CTkFrame(liste_scroll, fg_color="transparent")
+        satir.pack(fill="x", pady=2)
+        
+        ctk.CTkLabel(satir, text=f"{sira}.", font=("Arial", 14, "bold"), width=30, anchor="w").pack(side="left")
+        ctk.CTkLabel(satir, text=isim, font=("Arial", 14, "bold")).pack(side="left", padx=10)
+        ctk.CTkLabel(satir, text=takim, font=("Arial", 12), text_color="gray").pack(side="left", padx=10)
+        ctk.CTkLabel(satir, text=f"{puan} Puan", font=("Arial", 14, "bold"), text_color="#016455").pack(side="right", padx=10)
+
+def siralama_hata_ciz():
+    for widget in f1_siralama_frame.winfo_children(): widget.destroy()
+    ctk.CTkLabel(f1_siralama_frame, text="⚠️ İnternet bağlantısı yok veya F1 Sunucusu yanıt vermedi.", text_color="red", font=("Arial", 14, "bold")).pack(pady=20)
+    ctk.CTkButton(f1_siralama_frame, text="🔄 Tekrar Dene", command=canli_siralamayi_cek).pack(pady=5)
+
+
+# --- ANA GÖVDE ÇERÇEVELERİ ---
+f1_takvim_frame = ctk.CTkFrame(sekme_f1, fg_color="transparent")
+f1_takvim_frame.pack(fill="x", pady=(5, 0))
+
+# Araya şık bir ayrım çizgisi
+ctk.CTkFrame(sekme_f1, height=2, fg_color="#444").pack(fill="x", padx=20, pady=5)
+
+# API Verisinin Çizileceği Çerçeve
+f1_siralama_frame = ctk.CTkFrame(sekme_f1, fg_color="#1a1a1a", corner_radius=10)
+f1_siralama_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+# İlk tetiklemeler
+f1_ilk_acilis()
+f1_ekrani_guncelle()
+canli_siralamayi_cek() # Uygulama açılır açılmaz internetten puanları çeker!
+
+
+
+
+
+cilt_ekrani_guncelle()
+
 aliskanlik_ekrani_guncelle()
-
-
-
 
 medya_ekrani_guncelle()
 takvim_ciz()
