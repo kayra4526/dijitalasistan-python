@@ -60,6 +60,8 @@ varsayilan_f1 = [
 ]
 f1_verisi = veri_yukle(F1_DOSYASI, varsayilan_f1)
 
+
+
 # --- 2. ARAYÜZ KURULUMU ---
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -71,6 +73,7 @@ app.title("🚀 Kişisel Dijital Asistan v8.0 - Tam Çalışan Sürüm")
 sekmeler = ctk.CTkTabview(app)
 sekmeler.pack(padx=20, pady=20, fill="both", expand=True)
 
+sekme_ana = sekmeler.add("🏠 Ana Ekran")
 sekme_butce = sekmeler.add("💰 Bütçe")
 sekme_ajanda = sekmeler.add("📓 Ajanda")
 sekme_takvim = sekmeler.add("📅 Takvim")
@@ -79,14 +82,152 @@ sekme_aliskanlik = sekmeler.add("🎯 Habit Tracker")
 sekme_cilt = sekmeler.add("🫧 Skincare")
 sekme_f1 = sekmeler.add("🏎️ F1 Hub")
 
+
 # ==========================================
-# --- BÜTÇE ---
+# --- 🏠 ANA EKRAN (DASHBOARD) ---
+# ==========================================
+def dashboard_guncelle():
+    # 1. Bütçe Durumu
+    toplam_harcama = sum(h["tutar"] for h in butce_verisi.get("harcamalar", []))
+    kalan = butce_verisi.get("gelir", 0) - toplam_harcama
+    dash_butce_lbl.configure(text=f"Kalan Bakiye:\n{kalan:.2f} TL", text_color="lightgreen" if kalan >= 0 else "red")
+
+    # 2. Ajanda Durumu (Bugün)
+    bugun = datetime.date.today().strftime("%d-%m-%Y")
+    bekleyen_gorev = 0
+    if bugun in ajanda_verisi:
+        bekleyen_gorev = len([g for g in ajanda_verisi[bugun].get("gorevler", []) if not g["tamamlandi"]])
+    dash_ajanda_lbl.configure(text=f"Bugünün Ajandası:\n{bekleyen_gorev} Bekleyen Görev")
+
+    # 3. F1 Durumu (Sıradaki Yarış)
+    bugun_tarih = datetime.date.today().strftime("%Y-%m-%d")
+    siradaki_yaris = "Veri Yok"
+    for yaris in f1_verisi:
+        if yaris["tarih"] >= bugun_tarih:
+            siradaki_yaris = f"{yaris['isim']}\n{yaris['tarih']}"
+            break
+    dash_f1_lbl.configure(text=f"Sıradaki F1 Yarışı:\n{siradaki_yaris}")
+
+# Dashboard Arayüz Tasarımı (4'lü Kutu Matrisi)
+ctk.CTkLabel(sekme_ana, text="👋 Hoş Geldin! İşte Bugünün Özeti", font=("Arial", 20, "bold")).pack(pady=20)
+
+kutu_frame = ctk.CTkFrame(sekme_ana, fg_color="transparent")
+kutu_frame.pack(pady=10)
+
+# Kutu 1: Bütçe
+kutu_butce = ctk.CTkFrame(kutu_frame, width=200, height=120, fg_color="#222")
+kutu_butce.pack_propagate(False); kutu_butce.grid(row=0, column=0, padx=10, pady=10)
+ctk.CTkLabel(kutu_butce, text="💵 BÜTÇE", font=("Arial", 14, "bold"), text_color="gold").pack(pady=10)
+dash_butce_lbl = ctk.CTkLabel(kutu_butce, text="-", font=("Arial", 16, "bold"))
+dash_butce_lbl.pack(pady=5)
+
+# Kutu 2: Ajanda
+kutu_ajanda = ctk.CTkFrame(kutu_frame, width=200, height=120, fg_color="#222")
+kutu_ajanda.pack_propagate(False); kutu_ajanda.grid(row=0, column=1, padx=10, pady=10)
+ctk.CTkLabel(kutu_ajanda, text="📅 AJANDA", font=("Arial", 14, "bold"), text_color="cyan").pack(pady=10)
+dash_ajanda_lbl = ctk.CTkLabel(kutu_ajanda, text="-", font=("Arial", 14))
+dash_ajanda_lbl.pack(pady=5)
+
+# Kutu 3: F1
+kutu_f1 = ctk.CTkFrame(kutu_frame, width=420, height=150, fg_color="#222")
+kutu_f1.pack_propagate(False); kutu_f1.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+ctk.CTkLabel(kutu_f1, text="🏎️ FORMULA 1", font=("Arial", 14, "bold"), text_color="red").pack(pady=10)
+dash_f1_lbl = ctk.CTkLabel(kutu_f1, text="-", font=("Arial", 14))
+dash_f1_lbl.pack(pady=5)
+
+ctk.CTkButton(sekme_ana, text="🔄 Ekranı Yenile", command=dashboard_guncelle, width=150).pack(pady=20)
+
+# Uygulama açıldığında ilk verileri çekmesi için
+app.after(100, dashboard_guncelle)
+
+
+
+# --- 🍅 POMODORO SAYACI (AJANDA İÇİ) ---
+pomodoro_saniye = 25 * 60
+pomodoro_calisiyor = False
+
+def pomodoro_guncelle():
+    global pomodoro_saniye, pomodoro_calisiyor
+    if pomodoro_calisiyor and pomodoro_saniye > 0:
+        pomodoro_saniye -= 1
+        dak = pomodoro_saniye // 60
+        san = pomodoro_saniye % 60
+        pomodoro_lbl.configure(text=f"{dak:02d}:{san:02d}")
+        app.after(1000, pomodoro_guncelle)
+    elif pomodoro_saniye == 0:
+        pomodoro_calisiyor = False
+        pomodoro_lbl.configure(text="00:00", text_color="red")
+        pomodoro_btn.configure(text="▶️ Başla")
+
+def pomodoro_basla_dur():
+    global pomodoro_calisiyor
+    if pomodoro_calisiyor:
+        pomodoro_calisiyor = False
+        pomodoro_btn.configure(text="▶️ Başla", fg_color="#1f538d")
+    else:
+        if pomodoro_saniye == 0: return # Süre bittiyse başlamasın
+        pomodoro_calisiyor = True
+        pomodoro_btn.configure(text="⏸️ Duraklat", fg_color="orange")
+        pomodoro_guncelle()
+
+def pomodoro_sifirla():
+    global pomodoro_saniye, pomodoro_calisiyor
+    pomodoro_calisiyor = False
+    pomodoro_saniye = 25 * 60
+    pomodoro_lbl.configure(text="25:00", text_color="cyan")
+    pomodoro_btn.configure(text="▶️ Başla", fg_color="#1f538d")
+
+# Pomodoro Arayüzü (Ajanda sekmesinin en üstünde dursun)
+pomo_frame = ctk.CTkFrame(sekme_ana, fg_color="#2b2b2b", corner_radius=10)
+pomo_frame.pack(pady=(5, 10), padx=20, fill="x")
+
+ctk.CTkLabel(pomo_frame, text="🍅 Odaklanma Modu:", font=("Arial", 14, "bold")).pack(side="left", padx=15)
+pomodoro_lbl = ctk.CTkLabel(pomo_frame, text="25:00", font=("Courier", 24, "bold"), text_color="cyan")
+pomodoro_lbl.pack(side="left", padx=20)
+
+pomodoro_btn = ctk.CTkButton(pomo_frame, text="▶️ Başla", command=pomodoro_basla_dur, width=80)
+pomodoro_btn.pack(side="left", padx=5)
+ctk.CTkButton(pomo_frame, text="🔄 Sıfırla", command=pomodoro_sifirla, width=80, fg_color="#555").pack(side="left", padx=5)
+
+
+# ==========================================
+# --- BÜTÇE (GRUPLANDIRILMIŞ DETAYLI LİSTE) ---
 # ==========================================
 def butce_ekrani_guncelle():
+    # 1. Özet Kısmını Hesapla
     toplam_harcama = sum(h["tutar"] for h in butce_verisi["harcamalar"])
     kalan = butce_verisi["gelir"] - toplam_harcama
     ozet_metni = f"💵 Gelir: {butce_verisi['gelir']:.2f} TL\n💸 Gider: {toplam_harcama:.2f} TL\n------------------------\n📈 Kalan: {kalan:.2f} TL"
     butce_ozet_label.configure(text=ozet_metni, text_color="red" if kalan < 0 else "white")
+
+    # 2. Detaylı Harcama Listesini Güncelle
+    butce_detay_textbox.configure(state="normal")
+    butce_detay_textbox.delete("1.0", "end")
+    
+    if not butce_verisi["harcamalar"]:
+        butce_detay_textbox.insert("end", "ℹ️ Henüz harcama eklenmedi. Cüzdan güvende!")
+    else:
+        # Harcamaları kategorilerine göre sözlük (dictionary) içinde grupluyoruz
+        gruplar = {}
+        for h in butce_verisi["harcamalar"]:
+            kat = h["kategori"]
+            if kat not in gruplar:
+                gruplar[kat] = []
+            gruplar[kat].append(h)
+            
+        # Gruplanmış verileri ekrana şık bir şekilde yazdırıyoruz
+        detay_metni = ""
+        for kat, harcamalar in gruplar.items():
+            kategori_toplam = sum(h["tutar"] for h in harcamalar)
+            detay_metni += f"📂 {kat.upper()} (Kategori Toplamı: {kategori_toplam:.2f} TL)\n"
+            
+            for h in harcamalar:
+                detay_metni += f"   - {h['aciklama']}: {h['tutar']:.2f} TL\n"
+            detay_metni += "\n" # Kategoriler arası boşluk
+            
+        butce_detay_textbox.insert("end", detay_metni)
+        
+    butce_detay_textbox.configure(state="disabled")
 
 def yeni_kategori_ekle():
     yeni = kat_entry.get()
@@ -111,19 +252,41 @@ def harcama_ekle():
         butce_verisi["harcamalar"].append({"kategori": kategori_secim.get(), "aciklama": aciklama, "tutar": tutar})
         veri_kaydet(BUTCE_DOSYASI, butce_verisi)
         butce_ekrani_guncelle()
+        
+        # Ekledikten sonra kutuları temizle ki arka arkaya hızlıca eklenebilsin
+        tutar_entry.delete(0, 'end')
+        aciklama_entry.delete(0, 'end')
     except: pass
 
-butce_ozet_label = ctk.CTkLabel(sekme_butce, text="", font=("Courier", 16), justify="left")
+# --- ARAYÜZ (UI) ELEMANLARI ---
+butce_ozet_label = ctk.CTkLabel(sekme_butce, text="", font=("Courier", 16, "bold"), justify="left")
 butce_ozet_label.pack(pady=10)
-kat_frame = ctk.CTkFrame(sekme_butce); kat_frame.pack(pady=5)
-kat_entry = ctk.CTkEntry(kat_frame, placeholder_text="Yeni Kategori Adı"); kat_entry.pack(side="left", padx=5)
+
+kat_frame = ctk.CTkFrame(sekme_butce)
+kat_frame.pack(pady=5)
+kat_entry = ctk.CTkEntry(kat_frame, placeholder_text="Yeni Kategori Adı")
+kat_entry.pack(side="left", padx=5)
 ctk.CTkButton(kat_frame, text="+", command=yeni_kategori_ekle, width=30).pack(side="left", padx=5)
-gelir_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Yeni Gelir Miktarı"); gelir_entry.pack(pady=5)
-ctk.CTkButton(sekme_butce, text="Gelir Güncelle", command=gelir_ekle).pack(pady=5)
-kategori_secim = ctk.CTkOptionMenu(sekme_butce, values=butce_verisi["kategoriler"]); kategori_secim.pack(pady=10)
-aciklama_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Açıklama"); aciklama_entry.pack(pady=5)
-tutar_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Tutar (TL)"); tutar_entry.pack(pady=5)
-ctk.CTkButton(sekme_butce, text="Harcama Ekle", command=harcama_ekle, fg_color="red").pack(pady=10)
+
+gelir_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Yeni Gelir Miktarı")
+gelir_entry.pack(pady=5)
+ctk.CTkButton(sekme_butce, text="Gelir Güncelle", command=gelir_ekle, fg_color="green", hover_color="darkgreen").pack(pady=5)
+
+kategori_secim = ctk.CTkOptionMenu(sekme_butce, values=butce_verisi["kategoriler"])
+kategori_secim.pack(pady=10)
+
+aciklama_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Açıklama (Örn: Kahve, Market)")
+aciklama_entry.pack(pady=5)
+tutar_entry = ctk.CTkEntry(sekme_butce, placeholder_text="Tutar (TL)")
+tutar_entry.pack(pady=5)
+
+ctk.CTkButton(sekme_butce, text="Harcama Ekle", command=harcama_ekle, fg_color="red", hover_color="darkred").pack(pady=10)
+
+# Yeni Eklenen: Harcama Detay Kutusu
+butce_detay_textbox = ctk.CTkTextbox(sekme_butce, height=200, width=500, font=("Arial", 13))
+butce_detay_textbox.pack(pady=10)
+
+# İlk açılışta verileri ekrana bas
 butce_ekrani_guncelle()
 
 # ==========================================
@@ -733,3 +896,4 @@ aliskanlik_ekrani_guncelle()
 medya_ekrani_guncelle()
 takvim_ciz()
 app.mainloop()
+
